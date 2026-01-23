@@ -1,12 +1,11 @@
+import GoalBox from "@/components/GoalBox";
 import { StyleSheet, View } from "react-native";
 
 export default function Index() {
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
-        <View style={styles.goalContainer}>
-          3
-        </View>
+        <GoalBox goal={3}></GoalBox>
         <View style={styles.binaryContainer}>
           <View style={styles.binaryDigits}>
             1 0
