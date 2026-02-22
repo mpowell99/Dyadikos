@@ -1,3 +1,4 @@
+import { ProgressProvider } from "@/context/ProgressContext";
 import { Stack } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -65,7 +66,9 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack />
+        <ProgressProvider>
+          <Stack />
+        </ProgressProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

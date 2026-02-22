@@ -1,82 +1,45 @@
-import PolygonCanvas from '@/components/PolygonCanvas';
-import PuzzleHeader from '@/components/PuzzleHeader';
-import { calculateCurrentValue, hasReachedGoal } from '@/utils/binaryLogic';
-import type { Line } from '@/utils/geometry';
-import { getPuzzleByIndex, getTotalPuzzles } from '@/utils/puzzles';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import ShapePreview from '@/components/ShapePreview';
+import { useProgress } from '@/context/ProgressContext';
+import { shapeLevels } from '@/utils/puzzles';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function Index() {
-  const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
-  const [drawnLines, setDrawnLines] = useState<Line[]>([]);
-  const [isSuccess, setIsSuccess] = useState(false);
-
-  const puzzle = getPuzzleByIndex(currentPuzzleIndex);
-
-  if (!puzzle) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.completeText}>Game Complete!</Text>
-      </View>
-    );
-  }
-
-  const handleLineComplete = (from: number, to: number) => {
-    const newLine: Line = { from, to };
-
-    // Check if this line already exists
-    const lineExists = drawnLines.some(
-      (line) =>
-        (line.from === from && line.to === to) ||
-        (line.from === to && line.to === from)
-    );
-
-    if (lineExists) {
-      return; // Don't add duplicate lines
-    }
-
-    const updatedLines = [...drawnLines, newLine];
-    setDrawnLines(updatedLines);
-
-    // Check if puzzle is solved
-    if (hasReachedGoal(updatedLines, puzzle.goalNumber, puzzle.sides)) {
-      setIsSuccess(true);
-    }
-  };
-
-  const handleNextPuzzle = () => {
-    if (currentPuzzleIndex < getTotalPuzzles() - 1) {
-      setCurrentPuzzleIndex(currentPuzzleIndex + 1);
-      setDrawnLines([]);
-      setIsSuccess(false);
-    }
-  };
-
-  const { binary, decimal } = calculateCurrentValue(drawnLines, puzzle.sides);
+  const router = useRouter();
+  const { isShapeUnlocked, isShapeComplete, resetProgress } = useProgress();
 
   return (
-    <View style={styles.container}>
-      <PuzzleHeader
-        goalNumber={puzzle.goalNumber}
-        currentBinary={binary}
-        currentDecimal={decimal}
-        isSuccess={isSuccess}
-      />
-      <PolygonCanvas
-        sides={puzzle.sides}
-        drawnLines={drawnLines}
-        onLineComplete={handleLineComplete}
-        isSuccess={isSuccess}
-      />
-      {isSuccess && (
-        <Pressable
-          style={styles.nextButton}
-          onPress={handleNextPuzzle}
-        >
-          <Text style={styles.nextArrow}>→</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Shapes</Text>
+        <Pressable style={styles.resetButton} onPress={resetProgress}>
+          <Text style={styles.resetButtonText}>Reset</Text>
         </Pressable>
-      )}
-    </View>
+      </View>
+      <View style={styles.grid}>
+        {shapeLevels.map((shape) => {
+          const unlocked = isShapeUnlocked(shape.sides);
+          const complete = isShapeComplete(shape.sides);
+
+          return (
+            <Pressable
+              key={shape.sides}
+              style={[styles.card, !unlocked && styles.cardLocked]}
+              disabled={!unlocked}
+              onPress={() => router.push(`/shapes/${shape.sides}`)}
+            >
+              <Text style={styles.name}>{shape.name.toUpperCase()}</Text>
+              <ShapePreview
+                sides={shape.sides}
+                color={unlocked ? '#a78bfa' : '#666'}
+              />
+              {!unlocked && <Text style={styles.status}>Locked</Text>}
+              {unlocked && complete && <Text style={styles.status}>Complete</Text>}
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -85,26 +48,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#262626',
   },
-  nextButton: {
-    position: 'absolute',
-    bottom: 40,
-    right: 40,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#8b5cf6',
-    justifyContent: 'center',
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 36,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  resetButton: {
+    backgroundColor: '#3b3b3b',
+    borderColor: '#555',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 14,
+  },
+  card: {
+    width: '48%',
+    backgroundColor: '#333',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#444',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
   },
-  nextArrow: {
-    fontSize: 40,
-    color: '#fff',
-    fontWeight: 'bold',
+  cardLocked: {
+    opacity: 0.5,
   },
-  completeText: {
-    fontSize: 32,
+  name: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 10,
   },
-
+  status: {
+    color: '#fff',
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });
