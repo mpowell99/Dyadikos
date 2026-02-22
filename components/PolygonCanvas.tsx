@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated from 'react-native-reanimated';
+import Animated, { runOnJS } from 'react-native-reanimated';
 import Svg, { Circle, G, Line as SvgLine } from 'react-native-svg';
 
 type Props = {
@@ -45,26 +45,31 @@ export default function PolygonCanvas({
     setPoints(calculatedPoints);
   };
 
-  const createPointGesture = (pointIndex: number) => {
+  const createPointGesture = (pointIndex: number, startPoint: Point) => {
     return Gesture.Pan()
       .onStart(() => {
+        'worklet';
         if (isSuccess) return;
 
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setPressedPointIndex(pointIndex);
-        setDraggedFrom(pointIndex);
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        runOnJS(setPressedPointIndex)(pointIndex);
+        runOnJS(setDraggedFrom)(pointIndex);
+        runOnJS(setDragTo)({ x: startPoint.x, y: startPoint.y });
       })
       .onUpdate((event) => {
+        'worklet';
         if (draggedFrom !== null) {
-          setDragTo({ x: event.absoluteX, y: event.absoluteY });
+          const absoluteX = startPoint.x + event.translationX;
+          const absoluteY = startPoint.y + event.translationY;
+          runOnJS(setDragTo)({ x: absoluteX, y: absoluteY });
         }
       })
       .onFinalize(() => {
-        setPressedPointIndex(null);
+        'worklet';
+        runOnJS(setPressedPointIndex)(null);
 
         if (draggedFrom === null) return;
 
-        // Find which point we're releasing on
         const tolerance = 60;
         let releasedOnPoint: number | null = null;
 
@@ -78,12 +83,12 @@ export default function PolygonCanvas({
         });
 
         if (releasedOnPoint !== null) {
-          onLineComplete(draggedFrom, releasedOnPoint);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          runOnJS(onLineComplete)(draggedFrom, releasedOnPoint);
+          runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
         }
 
-        setDraggedFrom(null);
-        setDragTo({ x: 0, y: 0 });
+        runOnJS(setDraggedFrom)(null);
+        runOnJS(setDragTo)({ x: 0, y: 0 });
       });
   };
 
@@ -166,7 +171,7 @@ export default function PolygonCanvas({
       {points.map((point) => (
         <GestureDetector
           key={`gesture-${point.index}`}
-          gesture={createPointGesture(point.index)}
+          gesture={createPointGesture(point.index, point)}
         >
           <Animated.View
             style={{
